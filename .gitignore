@@ -4,6 +4,7 @@ dist
 # Test results
 coverage
 .nyc_output
+test-results
 
 # Packages #
 ############
