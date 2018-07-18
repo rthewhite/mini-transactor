@@ -5,6 +5,7 @@ dist
 coverage
 .nyc_output
 test-results
+js-lint-result.xml
 
 # Packages #
 ############

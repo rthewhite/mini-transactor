@@ -17,7 +17,16 @@ jobs:
           - v1-dependencies-
 
       - run: npm install
+
+      - run: npm run lint
+      - run: npm run test
+      - run: cd test-results && mkdir junit && cd ..
+      - run: mv js-lint-results test-results/junit
+
       - store_test_results:
+          path: test-results
+
+      - store_artifacts:
           path: test-results
 
       - save_cache:
@@ -25,5 +34,3 @@ jobs:
             - node_modules
           key: v1-dependencies-{{ checksum "package-lock.json" }}
 
-      # run tests!
-      - run: npm run test
