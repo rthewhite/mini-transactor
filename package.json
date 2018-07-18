@@ -1,0 +1,22 @@
+{
+  "name": "mini-transactor",
+  "version": "0.1.0",
+  "description": "",
+  "main": "dist/transaction.js",
+  "types": "dist/transaction.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "test": "jest --config jest-unit.json",
+    "test:watch": "jest --config jest-unit.json --watchAll",
+    "prepublish": "npm run test && npm run build"
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/jest": "^23.3.0",
+    "jest": "^23.4.1",
+    "ts-jest": "^23.0.0",
+    "tslint": "^5.10.0",
+    "typescript": "^2.9.2"
+  }
+}
