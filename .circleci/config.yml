@@ -17,6 +17,8 @@ jobs:
           - v1-dependencies-
 
       - run: npm install
+      - store_test_results:
+          path: test-results
 
       - save_cache:
           paths:
