@@ -21,7 +21,7 @@ jobs:
       - run: npm run lint:ci
       - run: npm run test
       - run: cd test-results && mkdir junit && cd ..
-      - run: mv js-lint-results test-results/junit
+      - run: mv js-lint-results.xml test-results/junit/
 
       - store_test_results:
           path: test-results
