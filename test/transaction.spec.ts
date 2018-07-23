@@ -340,7 +340,7 @@ describe('Transaction', () => {
     await transaction.applyAll([taskOne, taskTwo]);
 
     try {
-      transaction.revert();
+      await transaction.revert();
     } catch (e) {
       expect(e.success).toBe(false);
       expect(e.failedTasks.length).toBe(2);

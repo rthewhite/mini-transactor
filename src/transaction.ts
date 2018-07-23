@@ -14,7 +14,7 @@
 
 export interface ITask<T> {
   apply: () => Promise<T>;
-  revert?: () => Promise<T>;
+  revert?: () => Promise<T|any>;
 }
 
 export interface ITransactionConfig {
@@ -107,7 +107,11 @@ export class Transaction {
             promises.push(promise);
           });
 
-          result = await Promise.all(promises);
+          try {
+            result = await Promise.all(promises);
+          } catch (e) {
+            // Swallow the error, we want to continue, failing tasks will be captured above
+          }
         } else {
           try {
             result = await this.revertTask(task);
