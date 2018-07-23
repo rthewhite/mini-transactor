@@ -16,7 +16,7 @@ When using this package you create an transaction, in this transaction you can a
 If a task fails during execution it will automatically be retried. And if it fails, you can easily revert everything you have done.
 Below is an example of the flow, the full example including how to create a task is found in the examples folder.
 
-```
+```typescript
 const transaction = new Transaction();
 
 try {

@@ -19,7 +19,7 @@
     "test": "jest --config jest-unit.json",
     "test:watch": "jest --config jest-unit.json --watchAll",
     "lint:ci": "tslint -t junit -o js-lint-results.xml --project .",
-    "prepublish": "npm run test && npm run build"
+    "prepublish": "npm run test && rm -rf dist && npm run build"
   },
   "author": "",
   "license": "ISC",
