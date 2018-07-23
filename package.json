@@ -1,7 +1,17 @@
 {
   "name": "mini-transactor",
   "version": "0.1.0",
-  "description": "",
+  "description": "Easily revert asynchronous (promises) tasks in a transaction",
+  "keywords": [
+    "promises",
+    "transactions",
+    "do",
+    "undo",
+    "apply",
+    "revert",
+    "promise",
+    "transactor"
+  ],
   "main": "dist/transaction.js",
   "types": "dist/transaction.d.ts",
   "scripts": {

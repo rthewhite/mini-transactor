@@ -13,8 +13,23 @@
 // limitations under the License.
 
 export interface ITask<T> {
-  apply: () => Promise<T> | T;
-  revert?: () => Promise<T> | T;
+  apply: () => Promise<T>;
+  revert?: () => Promise<T>;
+}
+
+export interface ITransactionConfig {
+  retries: number;
+}
+
+export interface IFailedTask {
+  task: ITask<any>;
+  error: Error;
+}
+
+export interface IRevertReport {
+  success: boolean;
+  failedTasks?: IFailedTask[];
+  result?: any;
 }
 
 export class Transaction {
@@ -22,8 +37,14 @@ export class Transaction {
 
   // Nesting it further doesn't make sense TODO
   private appliedTasks: Array<ITask<any>|Array<ITask<any>>> = [];
-
   private revertable = true;
+  private retries = 0;
+
+  constructor(config?: ITransactionConfig) {
+    if (config && config.retries !== undefined) {
+      this.retries = config.retries;
+    }
+  }
 
   public apply(task: ITask<any>): Promise<any> {
     return this.applyTask(task).then((result) => {
@@ -44,58 +65,70 @@ export class Transaction {
     const promises: any[] = [];
 
     tasks.forEach((task) => {
-      const promise = this.applyTask(task);
-
-      promise
-        .then(() => {
+      promises.push(this.applyTask(task)
+        .then((result) => {
           const array = this.appliedTasks[appliedTasksIndex] as Array<ITask<any>>;
           array.push(task);
 
           if (!task.revert) {
             this.revertable = false;
           }
-        })
-        .catch(() => {
-          // We need to catch the error in this chain otherwise nodejs will exit
-          // but the error should actually be captured by the caller off applyAll
-          // because the promise.all will also fail
-        });
 
-      promises.push(promise);
+          return result;
+        }));
     });
 
     return Promise.all(promises);
   }
 
-  public async revert(): Promise<any> {
+  public async revert(): Promise<IRevertReport> {
     if (!this.isRevertable) {
       throw new Error('This is a irrevertable transaction');
     }
 
-    let result: any;
+    const failedReverts: Array<ITask<any>> = [];
+    return new Promise<IRevertReport>(async (resolve, reject) => {
+      let result: any;
 
-    while (this.appliedTasks.length > 0) {
-      const task = this.appliedTasks.pop();
+      while (this.appliedTasks.length > 0) {
+        const task = this.appliedTasks.pop();
 
-      if (Array.isArray(task)) {
-        const promises: Array<Promise<any>> = [];
+        if (Array.isArray(task)) {
+          const promises: Array<Promise<any>> = [];
 
-        task.forEach((tsk) => {
-          promises.push(this.revertTask(tsk));
-        });
+          task.forEach((tsk) => {
+            const promise = this.revertTask(tsk);
 
-        result = await Promise.all(promises);
+            promise
+              .catch(() => {
+                failedReverts.push(tsk);
+              });
 
-      } else {
-        try {
-          result = await this.revertTask(task);
-        } catch (e) {
-          console.log('failed to revert a task, continuing....');
+            promises.push(promise);
+          });
+
+          result = await Promise.all(promises);
+        } else {
+          try {
+            result = await this.revertTask(task);
+          } catch (e) {
+            failedReverts.push(task as ITask<any>);
+          }
         }
       }
-    }
 
-    return result;
+      if (failedReverts.length === 0) {
+        resolve({
+          success: true,
+          result
+        });
+      } else {
+        reject({
+          success: false,
+          failedTasks: failedReverts
+        });
+      }
+    });
   }
 
   get isRevertable(): boolean {
@@ -103,36 +136,49 @@ export class Transaction {
   }
 
   private applyTask(task: ITask<any>): Promise<any> {
-    try {
-      const result = task.apply();
+    return new Promise(async (resolve, reject)  => {
+      let callCount = 0;
+      let resolved = false;
 
-      if (result instanceof Promise) {
-        return result;
-      } else {
-        return Promise.resolve(result);
+      while (callCount <= this.retries && resolved === false) {
+        await task.apply()
+          .then((result) => {
+            resolved = true;
+            resolve(result);
+          })
+          .catch((e) => {
+            if (callCount === this.retries) {
+              reject(e);
+            }
+
+            callCount++;
+          });
       }
-
-    } catch (e) {
-      return Promise.reject(e);
-    }
+    });
   }
 
   private async revertTask(task?: ITask<any>): Promise<any> {
-    try {
-      // Ignore this line for coverage, the scenario
-      // were a task is not reverted is prevented in logic above
-      /* istanbul ignore next line */
-      if (task && task.revert) {
-        const result = task.revert();
+    return new Promise(async (resolve, reject)  => {
+      let callCount = 0;
+      let resolved = false;
 
-        if (result instanceof Promise) {
-          return result;
-        } else {
-          return Promise.resolve(result);
+      while (callCount <= this.retries && resolved === false) {
+        // passing a unrevertable tasks is prevented above
+        /* istanbul ignore next line */
+        if (task && task.revert) {
+          try {
+            const result = await task.revert();
+            resolved = true;
+            resolve(result);
+          } catch (e) {
+            if (callCount === this.retries) {
+              reject(e);
+            }
+
+            callCount++;
+          }
         }
       }
-    } catch (e) {
-      return Promise.reject(e);
-    }
+    });
   }
 }
