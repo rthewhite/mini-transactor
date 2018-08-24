@@ -15,7 +15,7 @@
   "main": "dist/transaction.js",
   "types": "dist/transaction.d.ts",
   "scripts": {
-    "build": "tsc",
+    "build": "rm -rf dist && tsc",
     "test": "jest --config jest-unit.json",
     "test:watch": "jest --config jest-unit.json --watchAll",
     "lint:ci": "tslint -t junit -o js-lint-results.xml --project .",
