@@ -276,13 +276,13 @@ describe('Transaction', () => {
     expect(resultOne).toBe(true);
   });
 
-  it('should fail when the task still fails after retries', async (done) => {
+  it('should fail when the task still fails after retries', async () => {
     let callCount = 0;
     const task = {
       apply: jest.fn(() => {
-        if (callCount < 2 ) {
+        if (callCount <= 3 ) {
           callCount++;
-          return Promise.reject(false);
+          return Promise.reject('failed');
         }
 
         callCount++;
@@ -290,13 +290,13 @@ describe('Transaction', () => {
       })
     };
 
-    const transaction = new Transaction({ retries: 1 });
+    const transaction = new Transaction({ retries: 3 });
 
     try {
       await transaction.apply(task);
+      expect(false).toBe(true);
     } catch (e) {
-      expect(e).toBe(false);
-      done();
+      expect(e).toBe('failed');
     }
   });
 
@@ -344,6 +344,28 @@ describe('Transaction', () => {
     } catch (e) {
       expect(e.success).toBe(false);
       expect(e.failedTasks.length).toBe(2);
+    }
+  });
+
+  it('should propagate errors in a apply call', async (done) => {
+    class TaskOne implements ITask<string> {
+      public apply() {
+        if (true === true) {
+          throw new Error('foobar');
+        }
+
+        return Promise.resolve('foobar');
+      }
+    }
+
+    const transaction = new Transaction();
+    const task = new TaskOne();
+
+    try {
+      await transaction.apply(task);
+    } catch (e) {
+      // console.log(e);
+      done();
     }
   });
 

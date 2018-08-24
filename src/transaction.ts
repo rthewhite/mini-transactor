@@ -38,23 +38,25 @@ export class Transaction {
   // Nesting it further doesn't make sense TODO
   private appliedTasks: Array<ITask<any>|Array<ITask<any>>> = [];
   private revertable = true;
-  private retries = 0;
+  private maxRetries = 0;
 
   constructor(config?: ITransactionConfig) {
     if (config && config.retries !== undefined) {
-      this.retries = config.retries;
+      this.maxRetries = config.retries;
     }
   }
 
   public apply(task: ITask<any>): Promise<any> {
-    return this.applyTask(task).then((result) => {
-      this.appliedTasks.push(task);
+    return new Promise((resolve, reject) => {
+      this.applyTask(task).then((result) => {
+        this.appliedTasks.push(task);
 
-      if (!task.revert) {
-        this.revertable = false;
-      }
+        if (!task.revert) {
+          this.revertable = false;
+        }
 
-      return result;
+        resolve(result);
+      }).catch(reject);
     });
   }
 
@@ -140,49 +142,29 @@ export class Transaction {
   }
 
   private applyTask(task: ITask<any>): Promise<any> {
-    return new Promise(async (resolve, reject)  => {
-      let callCount = 0;
-      let resolved = false;
-
-      while (callCount <= this.retries && resolved === false) {
-        await task.apply()
-          .then((result) => {
-            resolved = true;
-            resolve(result);
-          })
-          .catch((e) => {
-            if (callCount === this.retries) {
-              reject(e);
-            }
-
-            callCount++;
-          });
-      }
-    });
+    const maxRetries = this.maxRetries * 1;
+    return this.tryAtMost(task.apply, maxRetries);
   }
 
-  private async revertTask(task?: ITask<any>): Promise<any> {
-    return new Promise(async (resolve, reject)  => {
-      let callCount = 0;
-      let resolved = false;
+  private revertTask(task: ITask<any>): Promise<any> {
+    const maxRetries = this.maxRetries * 1;
+    return this.tryAtMost(task.revert as () => Promise<any>, maxRetries);
+  }
 
-      while (callCount <= this.retries && resolved === false) {
-        // passing a unrevertable tasks is prevented above
-        /* istanbul ignore next line */
-        if (task && task.revert) {
-          try {
-            const result = await task.revert();
-            resolved = true;
-            resolve(result);
-          } catch (e) {
-            if (callCount === this.retries) {
-              reject(e);
-            }
-
-            callCount++;
+  private tryAtMost(fn: () => any, retriesLeft: number ): Promise<any> {
+    return new Promise((resolve, reject) => {
+      fn()
+        .then(resolve)
+        .catch((e: any) => {
+          if (retriesLeft > 0) {
+            retriesLeft--;
+            this.tryAtMost(fn, retriesLeft)
+              .then(resolve)
+              .catch(reject);
+          } else {
+            reject(e);
           }
-        }
-      }
+        });
     });
   }
 }
