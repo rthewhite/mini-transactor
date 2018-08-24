@@ -369,6 +369,57 @@ describe('Transaction', () => {
     }
   });
 
+  it('should propagate errors in a apply call', async (done) => {
+    class TaskOne implements ITask<string> {
+      public apply() {
+        if (true === true) {
+          throw new Error('foobar');
+        }
+
+        return Promise.resolve('foobar');
+      }
+    }
+
+    const transaction = new Transaction();
+    const task = new TaskOne();
+
+    try {
+      await transaction.apply(task);
+    } catch (e) {
+      // console.log(e);
+      done();
+    }
+  });
+
+  it('should propagate errors in a revert call', async (done) => {
+    class TaskOne implements ITask<string> {
+      public apply() {
+        return Promise.resolve('foobar');
+      }
+
+      public revert() {
+        if (true === true) {
+          throw new Error('revert failed');
+        }
+
+        return Promise.resolve('foobar');
+      }
+    }
+
+    const transaction = new Transaction();
+    const task = new TaskOne();
+
+    try {
+      await transaction.apply(task);
+      await transaction.revert();
+    } catch (revertReport) {
+      expect(revertReport.success).toBe(false);
+      expect(revertReport.failedTasks[0].task).toBeInstanceOf(TaskOne);
+      expect(revertReport.failedTasks[0].error).toBeInstanceOf(Error);
+      done();
+    }
+  });
+
   describe('Execute examples to make sure they keep working', async () => {
     it('should execute the http-rest-update example correctly', async () => {
       await example();

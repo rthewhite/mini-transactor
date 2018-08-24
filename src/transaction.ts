@@ -88,7 +88,8 @@ export class Transaction {
       throw new Error('This is a irrevertable transaction');
     }
 
-    const failedReverts: Array<ITask<any>> = [];
+    const failedReverts: IFailedTask[] = [];
+
     return new Promise<IRevertReport>(async (resolve, reject) => {
       let result: any;
 
@@ -102,8 +103,11 @@ export class Transaction {
             const promise = this.revertTask(tsk);
 
             promise
-              .catch(() => {
-                failedReverts.push(tsk);
+              .catch((e) => {
+                failedReverts.push({
+                  task: tsk,
+                  error: e
+                });
               });
 
             promises.push(promise);
@@ -116,9 +120,12 @@ export class Transaction {
           }
         } else {
           try {
-            result = await this.revertTask(task);
+            result = await this.revertTask(task as ITask<any>);
           } catch (e) {
-            failedReverts.push(task as ITask<any>);
+            failedReverts.push({
+              task: task as ITask<any>,
+              error: e
+            });
           }
         }
       }
