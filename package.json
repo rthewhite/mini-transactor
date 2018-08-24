@@ -1,6 +1,6 @@
 {
   "name": "mini-transactor",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Easily revert asynchronous (promises) tasks in a transaction",
   "keywords": [
     "promises",
