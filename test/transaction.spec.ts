@@ -420,6 +420,46 @@ describe('Transaction', () => {
     }
   });
 
+  it('should maintain the this scope for the task apply function', async () => {
+    class TaskOne implements ITask<string> {
+      private reply = 'awesome';
+
+      public apply() {
+        return Promise.resolve(this.reply);
+      }
+    }
+
+    const task = new TaskOne();
+    const transaction = new Transaction();
+    const result = await transaction.apply(task);
+
+    expect(result).toBe('awesome');
+  });
+
+  it('should maintain the this scope for the task apply function', async () => {
+    let foobar: string;
+
+    class TaskOne implements ITask<string> {
+      private reply = 'awesome';
+
+      public apply() {
+        return Promise.resolve(this.reply);
+      }
+
+      public revert() {
+        foobar = this.reply;
+        return Promise.resolve(this.reply);
+      }
+    }
+
+    const task = new TaskOne();
+    const transaction = new Transaction();
+    await transaction.apply(task);
+    await transaction.revert();
+
+    expect(foobar).toBe('awesome');
+  });
+
   describe('Execute examples to make sure they keep working', async () => {
     it('should execute the http-rest-update example correctly', async () => {
       await example();

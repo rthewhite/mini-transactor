@@ -150,12 +150,12 @@ export class Transaction {
 
   private applyTask(task: ITask<any>): Promise<any> {
     const maxRetries = this.maxRetries * 1;
-    return this.tryAtMost(task.apply, maxRetries);
+    return this.tryAtMost(task.apply.bind(task), maxRetries);
   }
 
   private revertTask(task: ITask<any>): Promise<any> {
     const maxRetries = this.maxRetries * 1;
-    return this.tryAtMost(task.revert as () => Promise<any>, maxRetries);
+    return this.tryAtMost((task.revert as any).bind(task), maxRetries);
   }
 
   private tryAtMost(fn: () => any, retriesLeft: number ): Promise<any> {
