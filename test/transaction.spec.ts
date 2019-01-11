@@ -436,7 +436,7 @@ describe('Transaction', () => {
     expect(result).toBe('awesome');
   });
 
-  it('should maintain the this scope for the task apply function', async () => {
+  it('should maintain the this scope for the task apply function', () => {
     let foobar: string;
 
     class TaskOne implements ITask<string> {
@@ -454,15 +454,40 @@ describe('Transaction', () => {
 
     const task = new TaskOne();
     const transaction = new Transaction();
-    await transaction.apply(task);
-    await transaction.revert();
 
-    expect(foobar).toBe('awesome');
+    return transaction.apply(task)
+      .then(() => {
+        return transaction.revert();
+      })
+      .then(() => {
+        expect(foobar).toBe('awesome');
+      });
   });
 
-  describe('Execute examples to make sure they keep working', async () => {
-    it('should execute the http-rest-update example correctly', async () => {
-      await example();
+  it('should work with try catch', async (done) => {
+    class TaskOne implements ITask<string> {
+      public apply() {
+        if (true === true) {
+          throw new Error('foobar');
+        }
+
+        return Promise.resolve('foobar');
+      }
+    }
+
+    const transaction = new Transaction();
+
+    try {
+      await transaction.apply(new TaskOne());
+    } catch (e) {
+      expect(e).toBeDefined();
+      done();
+    }
+  });
+
+  describe('Execute examples to make sure they keep working', () => {
+    it('should execute the http-rest-update example correctly', () => {
+      return example();
     });
   });
 });
